@@ -27,10 +27,10 @@ import time
 # Constantes
 signals_M = {
             # Escritura de pc a logo
-            'hab_general': 'V948.0', #M1
-            'reajuste': 'V948.1', #M2 (reservada)
-            'hab_entrar_A': 'V948.2', #M3
-            'hab_entrar_B': 'V948.3', #M4
+            'hab_general': 'V0.0', #M1
+            'reajuste': 'V0.1', #M2 (reservada)
+            'hab_entrar_A': 'V0.2', #M3
+            'hab_entrar_B': 'V0.3', #M4
             'camion_en_balanza': 'V948.4', #M5
             'fin_pesada': 'V948.5', #M6
             'balanza_en_cero': 'V948.6', #M7
@@ -63,8 +63,8 @@ PESO_CAMION = 5000 # Para calcular si hay un camion en la balanza
 
 client = snap7.logo.Logo()
 LOGO_MAC = '8C:F3:19:B5:40:16' # Buscar IP via ARP?
-LOGO_IP = '192.168.0.3'
-LOGO_IP = '127.0.0.1'
+LOGO_IP = '192.168.0.5'
+#LOGO_IP = '127.0.0.1'
 RACK = 0
 SLOT = 1
 TCP_PORT = 102 # default
