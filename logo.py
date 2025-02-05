@@ -7,22 +7,11 @@ import time
 
 # Instalar dependencias
 # pip install python-snap7
+
 # sudo add-apt-repository ppa:gijzelaar/snap7
 # sudo apt update
 # sudo apt install libsnap7-1 libsnap7-dev
 # sudo apt-get install python3-tk
-
-# Levantar servidor falso s7
-# python3 -m snap7.server --port 102
-
-# Configurar red
-# sudo ip address flush dev enp9s0
-# sudo ip route flush dev enp9s0
-# sudo ip address add 192.168.0.5/24 brd + dev enp9s0
-# sudo ip route add 192.168.0.1 dev enp9s0
-# sudo ip route add default via 192.168.0.1 dev enp9s0
-# ip a s dev enp9s0
-
 
 # Constantes
 signals_M = {
@@ -31,20 +20,20 @@ signals_M = {
             'reajuste': 'V0.1', #M2 (reservada)
             'hab_entrar_A': 'V0.2', #M3
             'hab_entrar_B': 'V0.3', #M4
-            'camion_en_balanza': 'V948.4', #M5
-            'fin_pesada': 'V948.5', #M6
-            'balanza_en_cero': 'V948.6', #M7
+            'camion_en_balanza': 'V0.4', #M5
+            'fin_pesada': 'V0.5', #M6
+            'balanza_en_cero': 'V0.6', #M7
             
             # Uso interno
-            'uso_interno_1': 'V948.7', #M8
+            'uso_interno_1': 'V0.7', #M8
             
             # Lectura de logo a pc
-            'listo': 'V949.0', #M9
-            'ingreso_A': 'V949.1', #M10
-            'ingreso_B': 'V949.2', #M11
-            'listo_para_pesar': 'V949.3', #M12
-            'salida_A': 'V948.4', #M13
-            'salida_B': 'V948.5' #M14
+            'listo': 'V1.0', #M9
+            'ingreso_A': 'V1.1', #M10
+            'ingreso_B': 'V1.2', #M11
+            'listo_para_pesar': 'V1.3', #M12
+            'salida_A': 'V1.4', #M13
+            'salida_B': 'V1.5' #M14
         }
 
 signals_I = {
@@ -116,6 +105,7 @@ app = tk.Tk()
 app.title('Control de Bascula')
 
 control_labels = {}
+spin_pesaje = None
 
 def create_app_control(label_name, signal):
     control_label = tk.Label(app, text=label_name, fg='black')
@@ -153,20 +143,30 @@ def on_spin_change():
         client.write(signals_M['camion_en_balanza'], 1)
         client.write(signals_M['balanza_en_cero'], 0)
 
-create_app_control('Hab. general', 'hab_general')
-create_app_control('Hab. entrar A', 'hab_entrar_A')
-create_app_control('Hab. entrar B', 'hab_entrar_B')
-create_app_control('Camion en balanza', 'camion_en_balanza')
-create_app_control('Fin pesada', 'fin_pesada')
-create_app_control('Balanza en cero', 'balanza_en_cero')
 
-spin_pesaje = tk.Spinbox(app, from_=0, to=65000, command=on_spin_change)
-spin_pesaje.pack()
+def main():
+    # Crear controles UI
+    create_app_control('Hab. general', 'hab_general')
+    create_app_control('Hab. entrar A', 'hab_entrar_A')
+    create_app_control('Hab. entrar B', 'hab_entrar_B')
+    create_app_control('Camion en balanza', 'camion_en_balanza')
+    create_app_control('Fin pesada', 'fin_pesada')
+    create_app_control('Balanza en cero', 'balanza_en_cero')
 
-read_signals_thread = threading.Thread(target=read_logo_signals_status, daemon=True)
-read_signals_thread.start()
+    global spin_pesaje
+    spin_pesaje = tk.Spinbox(app, from_=0, to=65000, command=on_spin_change)
+    spin_pesaje.pack()
 
-app.mainloop()
+    # Correr loop para actualizar lecturas del logo
+    read_signals_thread = threading.Thread(target=read_logo_signals_status, daemon=True)
+    read_signals_thread.start()
 
-client.disconnect()
+    # Iniciar UI
+    app.mainloop()
+
+    client.disconnect()
+
+
+if __name__ == '__main__':
+    main()
 
