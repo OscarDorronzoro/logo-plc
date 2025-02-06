@@ -1,8 +1,8 @@
+# testing
 import serial
 from serial.tools import list_ports
 import threading
 
-# pip install pyserial
 RS_485_FRAME_LENGTH = 14
 serial_readers = {}
 f_cards = None
@@ -32,7 +32,7 @@ def init():
                 port_reader_A = p.name
 
         # Set port for reader B
-        if p.serial_number and p.serial_number.__contains__('A5069RR4'): # Change serial number
+        if p.serial_number and p.serial_number.__contains__('A5069RR4B'): # Change serial number
             if p.name.__contains__('ttyUSB'):
                 port_reader_B = f'/dev/{p.name}'
             else:

@@ -14,52 +14,59 @@ import time
 # sudo apt-get install python3-tk
 
 # Constantes
-signals_M = {
-            # Escritura de pc a logo
-            'hab_general': 'V0.0', #M1
-            'reajuste': 'V0.1', #M2 (reservada)
-            'hab_entrar_A': 'V0.2', #M3
-            'hab_entrar_B': 'V0.3', #M4
-            'camion_en_balanza': 'V0.4', #M5
-            'fin_pesada': 'V0.5', #M6
-            'balanza_en_cero': 'V0.6', #M7
-            
-            # Uso interno
-            'uso_interno_1': 'V0.7', #M8
-            
-            # Lectura de logo a pc
-            'listo': 'V1.0', #M9
-            'ingreso_A': 'V1.1', #M10
-            'ingreso_B': 'V1.2', #M11
-            'listo_para_pesar': 'V1.3', #M12
-            'salida_A': 'V1.4', #M13
-            'salida_B': 'V1.5' #M14
-        }
+signals_writing = {
+    # Escritura de pc a logo
+    'hab_general': 'V0.0', #M1
+    #'reajuste': 'V0.1', #M2 (reservada)
+    'hab_entrar_A': 'V0.2', #M3
+    'hab_entrar_B': 'V0.3', #M4
+    'camion_en_balanza': 'V0.4', #M5
+    'fin_pesada': 'V0.5', #M6
+    'balanza_en_cero': 'V0.6' #M7
+    
+    # Uso interno
+    #,'uso_interno_1': 'V0.7' #M8
+}
 
+signals_reading = {
+    # Lectura de logo a pc
+    'listo': 'V1.0', #M9
+    'ingreso_A': 'V1.1', #M10
+    'ingreso_B': 'V1.2', #M11
+    'listo_para_pesar': 'V1.3', #M12
+    'salida_A': 'V1.4', #M13
+    'salida_B': 'V1.5' #M14
+}
+
+'''
 signals_I = {
-            'barrera_A': 'V923.0', #I1
-            'barrera_B': 'V923.1' #I2
-        }
+    'barrera_A': 'V923.0', #I1
+    'barrera_B': 'V923.1' #I2
+}
 
 signals_Q = {
-            'semaforo_ingreso_A': 'V942.0', #Q1
-            'semaforo_salida_A': 'V942.1', #Q2
-            'semaforo_ingreso_B': 'V942.2', #Q3
-            'semaforo_salida_B': 'V942.3', #Q4
-        }
+    'semaforo_ingreso_A': 'V942.0', #Q1
+    'semaforo_salida_A': 'V942.1', #Q2
+    'semaforo_ingreso_B': 'V942.2', #Q3
+    'semaforo_salida_B': 'V942.3', #Q4
+}
+'''
 
 PESO_CAMION = 5000 # Para calcular si hay un camion en la balanza
 
-client = snap7.logo.Logo()
-LOGO_MAC = '8C:F3:19:B5:40:16' # Buscar IP via ARP?
+LOGO_MAC = '8C:F3:19:B5:40:16' # Buscar IP via ARP? https://stackoverflow.com/questions/85577/search-for-host-with-mac-address-using-python
 LOGO_IP = '192.168.0.5'
 #LOGO_IP = '127.0.0.1'
 RACK = 0
 SLOT = 1
 TCP_PORT = 102 # default
 
+client = snap7.logo.Logo()
 client.connect(LOGO_IP, RACK, SLOT, TCP_PORT)
 print('Conexion con logo... OK')
+
+def write_memory_byte(addr, bit_value):
+    client.write(addr, bit_value)
 
 def write_memory(addr, bit_pos, value):
     current_byte = client.read(addr)
@@ -80,24 +87,14 @@ def write_memory_2(addr_bit, value):
     write_memory(addr, bit_pos, value)
 
 def read_status():
-    # Ms V948
     status = {}
-    for var in signals_M:
-        status[var] = client.read(f'{var}')
+    for var in signals_reading:
+        status[var] = client.read(var)
     
     return status
     
 def read_status_print():
-    # Is V923
-    for var in signals_I:
-        print(f'Variable {var}:', client.read(f'{var}'))
-    
-    # Qs V942
-    for var in signals_Q:
-        print(f'Variable {var}:', client.read(f'{var}'))
-    
-    # Ms V948
-    for var in signals_M:
+    for var in signals_reading:
         print(f'Variable {var}:', client.read(f'{var}'))
 
 # Definicion de UI
@@ -164,9 +161,13 @@ def main():
     # Iniciar UI
     app.mainloop()
 
-    client.disconnect()
+    
 
 
-if __name__ == '__main__':
-    main()
-
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Exiting...")
+    finally:
+        client.disconnect()
