@@ -22,12 +22,20 @@ print("connection OK")
 #Qs 942
 
 #Ms 948
-data = 0b11111001
-var = 'V0'
-client.write(var, data)
 
-for i in range(8):
-    print(f'Variable {var}.{i} vale:', client.read(f'{var}.{i}'))
+var = 'V0.0'
+client.write(var, 0)
+print(client.read(var))
+       
+print('ingreso A', client.read('V1.2'))
+print('salida A', client.read('V1.4'))
+print('ingreso B', client.read('V1.3'))
+print('salida B', client.read('V1.5'))
+
+print('ingreso A', client.read('V2.0'))
+print('salida A', client.read('V2.1'))
+print('ingreso B', client.read('V2.2'))
+print('salida B', client.read('V2.3'))
 
 
 
