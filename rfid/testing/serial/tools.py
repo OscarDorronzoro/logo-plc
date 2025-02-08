@@ -1,2 +1,0 @@
-list_ports = type('', (), {})()
-list_ports.comports = lambda : [{'name': 'COM3', 'description': 'COM3 reader A', 'serial_number': 'A5069RR4A'}, {'name': 'COM4', 'description': 'COM4 reader B', 'serial_number': 'A5069RR4B'}]
