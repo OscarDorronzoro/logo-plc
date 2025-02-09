@@ -1,12 +1,16 @@
 # Only for testing
+'''
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'testing'))
+'''
 
 import serial
-#from serial.tools import list_ports
+from serial.tools import list_ports
 import threading
 import time
+import queue
+
 
 # pip install pyserial
 RS_485_FRAME_LENGTH = 14
@@ -21,30 +25,27 @@ def init():
     global f_cards, f_valid
     global cards, valid_UIDs
 
-    port_reader_A = 'COM3' # Default value
-    port_reader_B = 'COM4' # Default value
+    port_readers = []
 
-    #ports = list_ports.comports()
-    ports = [type('', (), {'name':'COM3', 'description': 'Port COM3', 'serial_number': 'A5069RR4'})(), type('', (), {'name':'COM4', 'description': 'Port COM4', 'serial_number': 'A5069RR5'})()]
+    #ports = [type('', (), {'name':'COM3', 'description': 'Port COM3', 'serial_number': 'A5069RR4'})(), type('', (), {'name':'COM4', 'description': 'Port COM4', 'serial_number': 'A5069RR5'})()]
+    ports = list_ports.comports()
+
     for p in ports:
         print(f'{p.name} - {p.description} -- {p.serial_number}')
 
         # Set port for reader A
         if p.serial_number and p.serial_number.__contains__('A5069RR4'):
             if p.name.__contains__('ttyUSB'):
-                port_reader_A = f'/dev/{p.name}'
+                port_readers.append(f'/dev/{p.name}')
             else:
-                port_reader_A = p.name
+                port_readers.append(p.name)
 
-        # Set port for reader B
-        if p.serial_number and p.serial_number.__contains__('A5069RR5'): # Change serial number
-            if p.name.__contains__('ttyUSB'):
-                port_reader_B = f'/dev/{p.name}'
-            else:
-                port_reader_B = p.name
     print()
-    serial_readers['reader_A'] = serial.Serial(port=port_reader_A, baudrate=9600, bytesize=8, timeout=5, stopbits=serial.STOPBITS_ONE)
-    serial_readers['reader_B'] = serial.Serial(port=port_reader_B, baudrate=9600, bytesize=8, timeout=5, stopbits=serial.STOPBITS_ONE)
+    if len(port_readers) == 0:
+        raise Exception('No readers connected')
+    serial_readers['reader_A'] = serial.Serial(port=port_readers[0], baudrate=9600, bytesize=8, timeout=5, stopbits=serial.STOPBITS_ONE)
+    if len(port_readers) >= 2:
+        serial_readers['reader_B'] = serial.Serial(port=port_readers[1], baudrate=9600, bytesize=8, timeout=5, stopbits=serial.STOPBITS_ONE)
 
 
     f_cards = open('rfid_cards_db.txt', 'r+')
@@ -75,8 +76,11 @@ def add_new_card(data: bytes):
     if not cards.__contains__(str(uid)):
         f_cards.write(f'{uid};{data.hex()}\n')
 
+def get_card_UID(data):
+     return int.from_bytes(data[7:11], byteorder='big')
+
 def check_valid_UID(data):
-    uid = int.from_bytes(data[7:11], byteorder='big')
+    uid = get_card_UID(data)
     return valid_UIDs.__contains__(uid)
 
 def make_response(reader, valid_card):
@@ -87,14 +91,16 @@ def make_response(reader, valid_card):
     
     reader.write(bytes.fromhex(response))
 
-def reading_loop(reader_name):
+def reading_loop(reader_name, queue):
+    global serial_readers
+    
     if not serial_readers.keys().__contains__(reader_name):
         raise KeyError(f'reader key ("{reader_name}") doesn\'t exist')
     
     reader = serial_readers[reader_name]
     while True:
         res = reader.read(size=RS_485_FRAME_LENGTH)
-        print(res.hex())
+        #print(res.hex())
         if (
             res
             and len(res) == RS_485_FRAME_LENGTH
@@ -106,20 +112,39 @@ def reading_loop(reader_name):
             print() 
             make_response(reader, valid_card)
 
-def main():
-    global serial_readers
+            if valid_card:
+                queue.put(get_card_UID(res))
 
+def main():
     init()
+
+    rfid_A_queue = queue.Queue()
+    rfid_B_queue = queue.Queue()
+
     print('Waiting card...')
-    reader_A_thread = threading.Thread(target=reading_loop, args=['reader_A'], daemon=True)
-    reader_B_thread = threading.Thread(target=reading_loop, args=['reader_B'], daemon=True)
+    reader_A_thread = threading.Thread(target=reading_loop, args=['reader_A', rfid_A_queue], daemon=True)
+    reader_B_thread = threading.Thread(target=reading_loop, args=['reader_B', rfid_B_queue], daemon=True)
     
     reader_A_thread.start()
     reader_B_thread.start()
     
     # Main loop
     while True:
-        time.sleep(3)
+         # RFID reader A
+        try:
+            valid_card_reader_A = rfid_A_queue.get_nowait()  # Get card number from authorized access through reader A
+            print(valid_card_reader_A)
+        except queue.Empty:
+            pass  # No valid card readings
+
+        # RFID reader B
+        try:
+            valid_card_reader_B = rfid_B_queue.get_nowait()  # Get card number from authorized access through reader B
+            print(valid_card_reader_B)
+        except queue.Empty:
+            pass  # No valid card readings
+
+        time.sleep(1)
 
 if __name__ == "__main__":
     try:
