@@ -5,25 +5,32 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'testing'))
 '''
 
+from ReaderFactory import Reader, ReaderFactory
 import serial
 from serial.tools import list_ports
 import threading
 import time
 import queue
 
-
 # pip install pyserial
+
 RS_485_FRAME_LENGTH = 14
+
 serial_readers = {}
+rfid_readers = {}
+
 f_cards = None
 f_valid = None
 cards = []
 valid_UIDs = []
 
-def init():
-    global serial_readers
+def init(options):
+    global serial_readers, rfid_readers
     global f_cards, f_valid
     global cards, valid_UIDs
+
+    rfid_readers['reader_A'] = ReaderFactory(options['reader_type']) # 'serial' / 'tcp'
+    rfid_readers['reader_B'] = ReaderFactory(options['reader_type']) # 'serial' / 'tcp'
 
     port_readers = []
 
@@ -48,8 +55,8 @@ def init():
         serial_readers['reader_B'] = serial.Serial(port=port_readers[1], baudrate=9600, bytesize=8, timeout=5, stopbits=serial.STOPBITS_ONE)
 
 
-    f_cards = open('rfid_cards_db.txt', 'r+')
-    f_valid = open('valid_uid_db.txt', 'r')
+    f_cards = open(f'{options[db_root_folder]}rfid_cards_db.txt', 'r+')
+    f_valid = open(f'{options[db_root_folder]}valid_uid_db.txt', 'r')
 
     cards = []
     for c in f_cards.readlines():
@@ -116,7 +123,11 @@ def reading_loop(reader_name, queue):
                 queue.put(get_card_UID(res))
 
 def main():
-    init()
+    options = {
+        'db_root_folder': '../db/'
+        ,'reader_type': 'serial'
+    }
+    init(options)
 
     rfid_A_queue = queue.Queue()
     rfid_B_queue = queue.Queue()
