@@ -1,9 +1,15 @@
+# Only for testing
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'testing'))
+
 import serial
+#from serial.tools import list_ports
 import socket
 
 # Define the base class for readers
 class Reader:
-    def __int__(self):
+    def __init__(self):
         self.reader = None
 
     def read(self, size):
@@ -12,14 +18,14 @@ class Reader:
     def write(self, data):
          raise NotImplementedError("Subclasses must implement this method")
     
-    def close(self)
-        print(type(self.reader))
-        self.reader.close()
+    def close(self):
+        if self.reader:
+            self.reader.close()
 
 # Define the SerialReader class
 class SerialReader(Reader):
     def __init__(self, port):
-        super().__init__()
+        super().__init__(self)
         self.reader = serial.Serial(port=port, baudrate=9600, bytesize=8, timeout=5, stopbits=serial.STOPBITS_ONE)
 
     def read(self, size=14):
@@ -27,9 +33,6 @@ class SerialReader(Reader):
 
     def write(self, data):
         self.reader.write(data)
-
-    #def close(self):
-    #    reader.close()
 
 # Define the TCPReader class
 class TCPReader(Reader):
@@ -43,23 +46,49 @@ class TCPReader(Reader):
         conn, addr = self.socket.accept()
         self.reader = conn
 
-        return self.reader.recv(size)
+        data = self.reader.recv(size) # test: nc localhost 10000 < tcp_rfid_probe.txt
+        return data
 
     def write(self, data):
         self.reader.send(data)
-    
-    #def close(self):
-    #    self.reader.close()
+        self.close()
 
 # Define the ReaderFactory class
 class ReaderFactory:
-    
+    serial_available_ports = []
+    tcp_available_ports = []
+
+    @staticmethod
+    def autodetect_ports():
+        ports = [type('', (), {'name':'COM3', 'description': 'Port COM3', 'serial_number': 'A5069RR4A'})(), type('', (), {'name':'COM4', 'description': 'Port COM4', 'serial_number': 'A5069RR4A'})()]
+        #ports = list_ports.comports()
+
+        for p in ports:
+            print(f'{p.name} - {p.description} -- {p.serial_number}')
+
+            port_name = ''
+            if p.serial_number and p.serial_number.__contains__('A5069RR4'):
+                if p.name.__contains__('ttyUSB'):
+                    port_name = f'/dev/{p.name}'
+                else:
+                    port_name = p.name
+                ReaderFactory.serial_available_ports.append(port_name)
+   
+        # TCP (default ports to listen on for exemys)
+        ReaderFactory.tcp_available_ports.append(10000)
+        ReaderFactory.tcp_available_ports.append(10001)
+
     @staticmethod
     def get_reader(reader_type):
         if reader_type == "serial":
-            return SerialReader()
+            if len(ReaderFactory.serial_available_ports) == 0:
+                raise Exception('No readers connected over serial port')
+            print(ReaderFactory.serial_available_ports)
+            return SerialReader(ReaderFactory.serial_available_ports.pop(0))
         elif reader_type == "tcp":
-            return TCPReader()
+            if len(ReaderFactory.tcp_available_ports) == 0:
+                raise Exception('No readers connected over TCP')
+            return TCPReader(ReaderFactory.tcp_available_ports.pop(0))
         else:
             raise ValueError("Invalid reader type")
 
