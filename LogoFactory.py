@@ -54,7 +54,10 @@ class S7(LogoConn):
         self.client = snap7.logo.Logo()
 
     def connect(self, ip_address, port=102):
-        self.client.connect(ip_address, self.rack, self.slot, port)
+        try:
+            self.client.connect(ip_address, self.rack, self.slot, port)
+        except Exception as e:
+            raise Exception(f'Unable to connect via S7 to {ip_address}:{port}')
 
     def read(self, addr):
         return int(self.client.read(addr))
