@@ -1,8 +1,6 @@
 import tkinter as tk
 from tkinter import font
-import snap7
-from snap7.util import *
-from snap7.types import *
+from LogoFactory import LogoFactory
 import threading
 import queue
 import time
@@ -13,6 +11,7 @@ from rfid import read_rfid as rfid
 # Instalar dependencias
 # pip3 install python-snap7
 # pip3 install scapy
+# pip3 install pymodbus
 
 # sudo add-apt-repository ppa:gijzelaar/snap7
 # sudo apt update
@@ -40,10 +39,10 @@ signals_reading = {
     ,'salida_B': 'V1.5'
     ,'I1_barrera_A': 'V1.6'
     ,'I2_barrera_B': 'V1.7'
-    ,'Q1_semaforo_A1': 'V.2.0'
-    ,'Q2_semaforo_A2': 'V.2.1'
-    ,'Q3_semaforo_B1': 'V.2.2'
-    ,'Q4_semaforo_B2': 'V.2.3'
+    ,'Q1_semaforo_A1': 'V2.0'
+    ,'Q2_semaforo_A2': 'V2.1'
+    ,'Q3_semaforo_B1': 'V2.2'
+    ,'Q4_semaforo_B2': 'V2.3'
 }
 
 
@@ -52,12 +51,8 @@ PULSE_WIDTH = 3 # Pulse duration in seconds
 
 LOGO_MAC = '8C:F3:19:B5:40:16'
 LOGO_IP = '192.168.0.5'
-#LOGO_IP = '127.0.0.1'
-RACK = 0
-SLOT = 1
-TCP_PORT = 102 # default
 
-client = None
+logo_client = None
 
 app = None
 control_labels = {}
@@ -74,15 +69,18 @@ def lookup_ip_address(mac_address):
     pass
 
 def init():
-    global client
+    global logo_client
     global app, app_font
     global status_queue, rfid_A_queue, rfid_B_queue
     
     # Connection with logo
-    client = snap7.logo.Logo()
-    print('asdsa')
-    client.connect(LOGO_IP, RACK, SLOT, TCP_PORT)
-    print('Connection with logo... OK')
+    logo_client = LogoFactory.get_logo_conn('modbus')
+    # Trying testing local server
+    try:
+        logo_client.connect('127.0.0.1')
+    except Exception:
+        # Real Logo!
+        logo_client.connect(LOGO_IP)
     
     # Threading
     status_queue = queue.Queue()
@@ -90,7 +88,11 @@ def init():
     rfid_B_queue = queue.Queue()
 
     # RFID Reader
-    rfid.init()
+    options = {
+        'db_root_folder': './db/'
+        ,'reader_type': 'serial'
+    }
+    rfid.init(options)
 
     # Initialize Tkinter UI
     app = tk.Tk()
@@ -105,10 +107,10 @@ def init():
     app_font = font.Font(size=14)
 
 def read_memory(addr):
-    return int(client.read(addr))
+    return int(logo_client.read(addr))
 
 def write_memory(addr, bit_value):
-    client.write(addr, int(bit_value))
+    logo_client.write(addr, int(bit_value))
 
 def send_pulse(addr):
      async_pulse = threading.Thread(target=sync_send_pulse, args=[addr], daemon=True)
@@ -174,7 +176,7 @@ def update_ui_from_queue():
     # RFID reader B
     try:
         valid_card_reader_B = rfid_B_queue.get_nowait()  # Get card number from authorized access through reader B
-        toggle_memory(signals_writing['hab_entrar_B'], 1)
+        send_pulse(signals_writing['hab_entrar_B'])
     except queue.Empty:
         pass  # No valid card readings
 
@@ -276,4 +278,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("Exiting...")
     finally:
-        client.disconnect()
+        logo_client.close()
