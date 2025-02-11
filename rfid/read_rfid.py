@@ -1,11 +1,8 @@
-from ReaderFactory import ReaderFactory
-#import serial
-#from serial.tools import list_ports
+from .ReaderFactory import ReaderFactory
 import threading
 import time
 import queue
 
-# pip install pyserial
 
 RS_485_FRAME_LENGTH = 14
 
@@ -99,8 +96,8 @@ def reading_loop(reader_name, queue):
 
 def main():
     options = {
-        'db_root_folder': '../db/'
-        ,'reader_type': 'tcp' # serial / tcp
+        'db_root_folder': 'db/'
+        ,'reader_type': 'serial' # serial / tcp
     }
     init(options)
 

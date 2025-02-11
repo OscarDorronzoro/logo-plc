@@ -2,8 +2,9 @@
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'testing'))
+import rfid.testing.serial as serial
 
-import serial
+#import serial
 #from serial.tools import list_ports
 import socket
 
@@ -25,7 +26,7 @@ class Reader:
 # Define the SerialReader class
 class SerialReader(Reader):
     def __init__(self, port):
-        super().__init__(self)
+        super().__init__()
         self.reader = serial.Serial(port=port, baudrate=9600, bytesize=8, timeout=5, stopbits=serial.STOPBITS_ONE)
 
     def read(self, size=14):
@@ -83,7 +84,6 @@ class ReaderFactory:
         if reader_type == "serial":
             if len(ReaderFactory.serial_available_ports) == 0:
                 raise Exception('No readers connected over serial port')
-            print(ReaderFactory.serial_available_ports)
             return SerialReader(ReaderFactory.serial_available_ports.pop(0))
         elif reader_type == "tcp":
             if len(ReaderFactory.tcp_available_ports) == 0:

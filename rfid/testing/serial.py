@@ -1,5 +1,6 @@
 # mock_serial/serial.py
 import time
+import random
 
 STOPBITS_ONE = 1
 
@@ -30,7 +31,7 @@ class Serial:
             self._data_buffer = bytearray.fromhex('a6 00 0c 01 40 01 04 00 46 79 34 00 00 e5')
         data = self._data_buffer[:size]
         self._data_buffer = self._data_buffer[size:]
-        time.sleep(5)
+        time.sleep(5 + int(random.random()*10))
         return data
 
     def close(self):
