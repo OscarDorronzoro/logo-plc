@@ -5,14 +5,10 @@ import threading
 import queue
 import time
 #from scapy.all import ARP, Ether, srp
-#import pdb
+import pdb
 from rfid import read_rfid as rfid
 
-# Instalar dependencias
-# pip3 install python-snap7
-# pip3 install scapy
-# pip3 install pymodbus
-
+# Install Dependencies
 # sudo add-apt-repository ppa:gijzelaar/snap7
 # sudo apt update
 # sudo apt install libsnap7-1 libsnap7-dev
@@ -74,14 +70,19 @@ def init():
     global status_queue, rfid_A_queue, rfid_B_queue
     
     # Connection with logo
-    logo_client = LogoFactory.get_logo_conn('modbus')
+    logo_client = LogoFactory.get_logo_conn('s7')
     # Trying testing local server
     try:
         logo_client.connect('127.0.0.1')
-    except Exception:
+    except Exception as e:
         # Real Logo!
-        logo_client.connect(LOGO_IP)
-    
+        print(e)
+        try:
+            logo_client.connect(LOGO_IP)
+        except Exception as e:
+            print(e)
+            quit()
+
     # Threading
     status_queue = queue.Queue()
     rfid_A_queue = queue.Queue()
@@ -90,7 +91,7 @@ def init():
     # RFID Reader
     options = {
         'db_root_folder': './db/'
-        ,'reader_type': 'serial'
+        ,'reader_type': 'tcp'
     }
     rfid.init(options)
 
@@ -183,8 +184,10 @@ def update_ui_from_queue():
     # Schedule the next update
     app.after(200, update_ui_from_queue)
 
-def on_weight_change(w):
-    weight = int(w)
+def on_weight_change(event):
+    global weight_scale
+    
+    weight = int(weight_scale.get())
     if weight == 0:
         write_memory(signals_writing['camion_en_balanza'], 0)
         write_memory(signals_writing['balanza_en_cero'], 1)
@@ -215,7 +218,7 @@ def main():
     toggle_btn_hab_general = tk.Button(app, text='Activar/Desactivar', command=lambda: toggle_memory(signals_writing['hab_general']))
     toggle_btn_hab_general.grid(row=row, column=0, padx=10, pady=5, sticky="ew")
 
-    toggle_btn_fin_pesada = tk.Button(app, text='Activar/Desactivar', command=lambda: toggle_memory(signals_writing['fin_pesada']))
+    toggle_btn_fin_pesada = tk.Button(app, text='Activar/Desactivar', command=lambda: send_pulse(signals_writing['fin_pesada']))
     toggle_btn_fin_pesada.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
 
     row+=1
@@ -223,7 +226,8 @@ def main():
     create_app_label('Camion en balanza', 'camion_en_balanza', row=row, column=1)
     
     row+=1
-    weight_scale = tk.Scale(app, from_=0, to=65000, orient=tk.HORIZONTAL, command=on_weight_change)
+    weight_scale = tk.Scale(app, from_=0, to=65000, orient=tk.HORIZONTAL)
+    weight_scale.bind('<ButtonRelease-1>', on_weight_change)
     weight_scale.grid(row=row, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
     
     row+=1
@@ -278,4 +282,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("Exiting...")
     finally:
-        logo_client.close()
+        if logo_client:
+            logo_client.close()
+        if app:
+            app.quit()
