@@ -8,15 +8,10 @@ import time
 import pdb
 from rfid import read_rfid as rfid
 
-# Install Dependencies
-# sudo add-apt-repository ppa:gijzelaar/snap7
-# sudo apt update
-# sudo apt install libsnap7-1 libsnap7-dev
-# sudo apt-get install python3-tk
 
-# Constantes
+# Constants
 signals_writing = {
-    # Escritura de pc a logo
+    # Write from PC to Logo!
     'hab_general': 'V0.0', # Continous signal
     'balanza_en_cero': 'V0.1', # Continoues signal
     'hab_entrar_A': 'V0.2', # Pulse, RFID by A
@@ -26,7 +21,7 @@ signals_writing = {
 }
 
 signals_reading = {
-    # Lectura de logo a pc
+    # Read from Logo! to PC
     'en_servicio': 'V1.0'
     ,'listo': 'V1.1'
     ,'ingreso_A': 'V1.2'
@@ -53,6 +48,7 @@ logo_client = None
 app = None
 control_labels = {}
 weight_scale = None
+semaphore_ui = {}
 app_font = None
 
 # Thread-safe queue for status updates
@@ -156,6 +152,7 @@ def read_logo_signals_status():
         time.sleep(1)
 
 def update_ui_from_queue():
+    global control_labels, semaphore_ui
     global status_queue, rfid_A_queue, rfid_B_queue
     
     # Logo status queue
@@ -164,6 +161,16 @@ def update_ui_from_queue():
         for key in control_labels.keys():
             text_color = get_status_color(status, key)
             control_labels[key].config(fg=text_color)
+
+        for sem_group in semaphore_ui['semaphores']:
+            update_semaphore_color(
+                semaphore_ui['canvas']
+                ,semaphore_ui['semaphores'][sem_group]['negated']
+                ,'red' if not status[sem_group] else 'gray')
+            update_semaphore_color(
+                semaphore_ui['canvas']
+                ,semaphore_ui['semaphores'][sem_group]['normal']
+                ,'green' if status[sem_group] else 'gray')
     except queue.Empty:
         pass  # No new status updates
 
@@ -196,6 +203,67 @@ def on_weight_change(event):
         write_memory(signals_writing['camion_en_balanza'], 1)
         write_memory(signals_writing['balanza_en_cero'], 0)
 
+def create_semaphore(canvas, x, y, radius, color):
+    return canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=color)
+
+def create_arrow(canvas, x1, y1, x2, y2):
+    return canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST)
+
+def setup_semaphore_ui(app, row):
+    global semaphore_ui
+
+    sep = 500
+    rad = 20
+    pad = rad*2 + 10
+    canvas = tk.Canvas(app, width=sep+2*pad, height=300)
+    canvas.grid(row=row, column=0, columnspan=2, padx=10, pady=10)
+    semaphore_ui['canvas'] = canvas
+    semaphores = {}
+
+    # Semaphore A (Exit)
+    y = 50
+    semaphore_A_exit = {}
+    semaphore_A_exit_red = create_semaphore(canvas, pad, y, rad, 'gray')
+    semaphore_A_exit['negated'] = semaphore_A_exit_red
+    semaphore_A_exit_green = create_semaphore(canvas, pad, y+pad, rad, 'gray')
+    semaphore_A_exit['normal'] = semaphore_A_exit_green
+    semaphores['Q2_semaforo_A2'] = semaphore_A_exit
+
+    arrow_a = create_arrow(canvas, 2*pad, y + int(pad/2), sep, y + int(pad/2))
+    
+    semaphore_A_entry = {}
+    semaphore_A_entry_red = create_semaphore(canvas, pad+sep, y, rad, 'gray')
+    semaphore_A_entry['negated'] = semaphore_A_entry_red
+    semaphore_A_entry_green = create_semaphore(canvas, pad+sep, y+pad, rad, 'gray')
+    semaphore_A_entry['normal'] = semaphore_A_entry_green
+    semaphores['Q1_semaforo_A1'] = semaphore_A_entry
+
+    # Semaphore B (Entry)
+    y += pad + rad
+    y += pad
+    semaphore_B_entry = {}
+    semaphore_B_entry_red = create_semaphore(canvas, pad, y, rad, 'gray')
+    semaphore_B_entry['negated'] = semaphore_B_entry_red
+    semaphore_B_entry_green = create_semaphore(canvas, pad, y+pad, rad, 'gray')
+    semaphore_B_entry['normal'] = semaphore_B_entry_green
+    semaphores['Q3_semaforo_B1'] = semaphore_B_entry
+
+    arrow_b = create_arrow(canvas, sep, y + int(pad/2), 2*pad, y + int(pad/2))
+    
+    semaphore_B_exit = {}
+    semaphore_B_exit_red = create_semaphore(canvas, pad+sep, y, rad, 'gray')
+    semaphore_B_exit['negated'] = semaphore_B_exit_red
+    semaphore_B_exit_green = create_semaphore(canvas, pad+sep, y+pad, rad, 'gray')
+    semaphore_B_exit['normal'] = semaphore_B_exit_green
+    semaphores['Q4_semaforo_B2'] = semaphore_B_exit
+
+    semaphore_ui['semaphores'] = semaphores
+
+    return semaphore_ui
+
+def update_semaphore_color(canvas, light_id, color):
+    canvas.itemconfig(light_id, fill=color)
+
 def main():
     global app
     global weight_scale
@@ -215,10 +283,10 @@ def main():
     create_app_label('Fin pesada', 'fin_pesada', row=row, column=1)
 
     row+=1
-    toggle_btn_hab_general = tk.Button(app, text='Activar/Desactivar', command=lambda: toggle_memory(signals_writing['hab_general']))
+    toggle_btn_hab_general = tk.Button(app, text='Activar/Desactivar', relief=tk.SUNKEN, command=lambda: toggle_memory(signals_writing['hab_general']))
     toggle_btn_hab_general.grid(row=row, column=0, padx=10, pady=5, sticky="ew")
 
-    toggle_btn_fin_pesada = tk.Button(app, text='Activar/Desactivar', command=lambda: send_pulse(signals_writing['fin_pesada']))
+    toggle_btn_fin_pesada = tk.Button(app, text='Activar/Desactivar', relief=tk.RAISED, command=lambda: send_pulse(signals_writing['fin_pesada']))
     toggle_btn_fin_pesada.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
 
     row+=1
@@ -251,6 +319,8 @@ def main():
     create_app_label('Listo pesar por A', 'salida_A', row=row, column=0)
     create_app_label('Listo pesar por B', 'salida_B', row=row, column=1)
     
+
+    '''
     row+=1
     create_app_label('Semaforo entrada A', 'Q1_semaforo_A1', row=row, column=0)
     create_app_label('Semaforo entrada B', 'Q3_semaforo_B1', row=row, column=1)
@@ -258,6 +328,10 @@ def main():
     row+=1
     create_app_label('Semaforo salida A', 'Q2_semaforo_A2', row=row, column=0)
     create_app_label('Semaforo salida B', 'Q4_semaforo_B2', row=row, column=1)
+    '''
+
+    row+=1
+    setup_semaphore_ui(app, row)
 
     # Start the thread for reading LOGO signals
     read_signals_thread = threading.Thread(target=read_logo_signals_status, daemon=True)
