@@ -1,7 +1,9 @@
 import snap7
-from snap7.util import *
-from snap7.types import *
-from pymodbus.client.sync import ModbusTcpClient
+#from snap7.util import *
+#from snap7.type import *
+from pymodbus.client import ModbusTcpClient
+#from snap7.types import *
+#from pymodbus.client.sync import ModbusTcpClient
 
 # Define the base class for Logo! connections
 class LogoConn:
