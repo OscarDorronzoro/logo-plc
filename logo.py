@@ -134,8 +134,9 @@ def read_status():
     
     return status
     
-def create_app_label(label_name, signal, row, column):
-    control_label = tk.Label(app, text=label_name, fg='black', font=app_font)
+def create_app_label(frame, label_name, signal, row, column):
+    global control_labels
+    control_label = tk.Label(frame, text=label_name, fg='black', font=app_font)
     control_label.grid(row=row, column=column, padx=10, pady=5, sticky="ew")
     control_labels[signal] = control_label
 
@@ -166,11 +167,13 @@ def update_ui_from_queue():
             update_semaphore_color(
                 semaphore_ui['canvas']
                 ,semaphore_ui['semaphores'][sem_group]['negated']
-                ,'red' if not status[sem_group] else 'gray')
+                ,'red' if not status[sem_group] else 'gray'
+            )
             update_semaphore_color(
                 semaphore_ui['canvas']
                 ,semaphore_ui['semaphores'][sem_group]['normal']
-                ,'green' if status[sem_group] else 'gray')
+                ,'green' if status[sem_group] else 'gray'
+            )
     except queue.Empty:
         pass  # No new status updates
 
@@ -209,13 +212,13 @@ def create_semaphore(canvas, x, y, radius, color):
 def create_arrow(canvas, x1, y1, x2, y2):
     return canvas.create_line(x1, y1, x2, y2, arrow=tk.LAST)
 
-def setup_semaphore_ui(app, row):
+def setup_semaphore_ui(frame, row):
     global semaphore_ui
 
     sep = 500
     rad = 20
     pad = rad*2 + 10
-    canvas = tk.Canvas(app, width=sep+2*pad, height=300)
+    canvas = tk.Canvas(frame, width=sep+2*pad, height=300)
     canvas.grid(row=row, column=0, columnspan=2, padx=10, pady=10)
     semaphore_ui['canvas'] = canvas
     semaphores = {}
@@ -264,6 +267,41 @@ def setup_semaphore_ui(app, row):
 def update_semaphore_color(canvas, light_id, color):
     canvas.itemconfig(light_id, fill=color)
 
+def create_scrollable_frame(app):
+    # Create a canvas with a vertical scrollbar
+    canvas = tk.Canvas(app)
+    scrollbar = tk.Scrollbar(app, orient=tk.VERTICAL, command=canvas.yview)
+    scrollable_frame = tk.Frame(canvas)
+
+    # Configure the canvas
+    canvas.configure(yscrollcommand=scrollbar.set)
+    canvas.bind(
+        '<Configure>',
+        lambda e: canvas.configure(scrollregion=canvas.bbox('all'))
+    )
+
+    # Add the scrollable frame to the canvas
+    canvas_frame = canvas.create_window((0, 0), window=scrollable_frame, anchor='nw')
+
+    # Function to resize the frame width to match the canvas
+    def resize_frame(event):
+        canvas.itemconfig(canvas_frame, width=event.width)
+
+    # Bind the canvas to resize the frame
+    canvas.bind('<Configure>', resize_frame)
+
+    # Pack the canvas and scrollbar
+    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    # Configure the scrollable frame to expand
+    scrollable_frame.bind(
+        '<Configure>',
+        lambda e: canvas.configure(scrollregion=canvas.bbox('all'))
+    )
+
+    return scrollable_frame
+
 def main():
     global app
     global weight_scale
@@ -271,67 +309,67 @@ def main():
 
     init()
     
+    frame = create_scrollable_frame(app)
+
     # Centering widgets
     for c in range(2):
-        app.grid_columnconfigure(c, weight=1)
-    #for r in range(7):
-    #    app.grid_rowconfigure(r, weight=1) # Row expands all columns
+        frame.grid_columnconfigure(c, weight=1)
 
     # Create UI controls using grid
     row = 0
-    create_app_label('Habilitacion general', 'hab_general', row=row, column=0)
-    create_app_label('Fin pesada', 'fin_pesada', row=row, column=1)
+    create_app_label(frame, 'Habilitacion general', 'hab_general', row=row, column=0)
+    create_app_label(frame, 'Fin pesada', 'fin_pesada', row=row, column=1)
 
     row+=1
-    toggle_btn_hab_general = tk.Button(app, text='Activar/Desactivar', relief=tk.SUNKEN, command=lambda: toggle_memory(signals_writing['hab_general']))
+    toggle_btn_hab_general = tk.Button(frame, text='Activar/Desactivar', relief=tk.SUNKEN, command=lambda: toggle_memory(signals_writing['hab_general']))
     toggle_btn_hab_general.grid(row=row, column=0, padx=10, pady=5, sticky="ew")
 
-    toggle_btn_fin_pesada = tk.Button(app, text='Activar/Desactivar', relief=tk.RAISED, command=lambda: send_pulse(signals_writing['fin_pesada']))
+    toggle_btn_fin_pesada = tk.Button(frame, text='Activar/Desactivar', relief=tk.RAISED, command=lambda: send_pulse(signals_writing['fin_pesada']))
     toggle_btn_fin_pesada.grid(row=row, column=1, padx=10, pady=5, sticky="ew")
 
     row+=1
-    create_app_label('Balanza en cero', 'balanza_en_cero', row=row, column=0)
-    create_app_label('Camion en balanza', 'camion_en_balanza', row=row, column=1)
+    create_app_label(frame, 'Balanza en cero', 'balanza_en_cero', row=row, column=0)
+    create_app_label(frame, 'Camion en balanza', 'camion_en_balanza', row=row, column=1)
     
     row+=1
-    weight_scale = tk.Scale(app, from_=0, to=65000, orient=tk.HORIZONTAL)
+    weight_scale = tk.Scale(frame, from_=0, to=65000, orient=tk.HORIZONTAL)
     weight_scale.bind('<ButtonRelease-1>', on_weight_change)
     weight_scale.grid(row=row, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
     
     row+=1
-    create_app_label('RFID A', 'hab_entrar_A', row=row, column=0)
-    create_app_label('RFID B', 'hab_entrar_B', row=row, column=1)
+    create_app_label(frame, 'RFID A', 'hab_entrar_A', row=row, column=0)
+    create_app_label(frame, 'RFID B', 'hab_entrar_B', row=row, column=1)
 
     # Readings from LOGO
     row+=1
-    create_app_label('En servicio', 'en_servicio', row=row, column=0)
-    create_app_label('Listo', 'listo', row=row, column=1)
+    create_app_label(frame, 'En servicio', 'en_servicio', row=row, column=0)
+    create_app_label(frame, 'Listo', 'listo', row=row, column=1)
     
     row+=1
-    create_app_label('I1 barrera A', 'I1_barrera_A', row=row, column=0)
-    create_app_label('I2 barrera B', 'I2_barrera_B', row=row, column=1)
+    create_app_label(frame, 'I1 barrera A', 'I1_barrera_A', row=row, column=0)
+    create_app_label(frame, 'I2 barrera B', 'I2_barrera_B', row=row, column=1)
 
     row+=1
-    create_app_label('Ingreso por A', 'ingreso_A', row=row, column=0)
-    create_app_label('Ingreso por B', 'ingreso_B', row=row, column=1)
+    create_app_label(frame, 'Ingreso por A', 'ingreso_A', row=row, column=0)
+    create_app_label(frame, 'Ingreso por B', 'ingreso_B', row=row, column=1)
 
     row+=1
-    create_app_label('Listo pesar por A', 'salida_A', row=row, column=0)
-    create_app_label('Listo pesar por B', 'salida_B', row=row, column=1)
+    create_app_label(frame, 'Listo pesar por A', 'salida_A', row=row, column=0)
+    create_app_label(frame, 'Listo pesar por B', 'salida_B', row=row, column=1)
     
 
     '''
     row+=1
-    create_app_label('Semaforo entrada A', 'Q1_semaforo_A1', row=row, column=0)
-    create_app_label('Semaforo entrada B', 'Q3_semaforo_B1', row=row, column=1)
+    create_app_label(frame, 'Semaforo entrada A', 'Q1_semaforo_A1', row=row, column=0)
+    create_app_label(frame, 'Semaforo entrada B', 'Q3_semaforo_B1', row=row, column=1)
     
     row+=1
-    create_app_label('Semaforo salida A', 'Q2_semaforo_A2', row=row, column=0)
-    create_app_label('Semaforo salida B', 'Q4_semaforo_B2', row=row, column=1)
+    create_app_label(frame, 'Semaforo salida A', 'Q2_semaforo_A2', row=row, column=0)
+    create_app_label(frame, 'Semaforo salida B', 'Q4_semaforo_B2', row=row, column=1)
     '''
 
     row+=1
-    setup_semaphore_ui(app, row)
+    setup_semaphore_ui(frame, row)
 
     # Start the thread for reading LOGO signals
     read_signals_thread = threading.Thread(target=read_logo_signals_status, daemon=True)
