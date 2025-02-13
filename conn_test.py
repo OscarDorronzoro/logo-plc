@@ -6,10 +6,12 @@ from snap7.util import *
 client = snap7.logo.Logo()
 LOGO_MAC = '' # Buscar IP via ARP 
 LOGO_IP = '192.168.0.5'
+LOGO_IP = '127.0.0.1'
 RACK = 0
 SLOT = 1
 TCP_PORT = 102
 
+print(LOGO_IP, '-------------------------------------')
 client.connect(LOGO_IP, RACK, SLOT, TCP_PORT)
 print("connection OK")
 
@@ -23,15 +25,8 @@ print("connection OK")
 
 #Ms 948
 
-var = 'V0.0'
-client.write(var, 0)
-print(client.read(var))
-       
-print('ingreso A', client.read('V1.2'))
-print('salida A', client.read('V1.4'))
-print('ingreso B', client.read('V1.3'))
-print('salida B', client.read('V1.5'))
 
+client.write('V2', 0b00000010)
 print('ingreso A', client.read('V2.0'))
 print('salida A', client.read('V2.1'))
 print('ingreso B', client.read('V2.2'))
