@@ -32,7 +32,7 @@ def init(options):
 
     cards = []
     for c in f_cards.readlines():
-        cards.append(c.split(';')[0])
+        cards.append(str(c.split(';')[0]))
 
     valid_UIDs = []
     for v in f_valid.readlines():

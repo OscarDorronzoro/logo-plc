@@ -38,7 +38,8 @@ signals_reading = {
 
 
 TRUCK_WEIGHT = 4000 # Threshold to calculate if there is a truck on the scale
-PULSE_WIDTH = 3 # Pulse duration in seconds
+PULSE_WIDTH = 1 # Pulse duration in seconds
+UI_DELAY = 1 # Seconds to wait for reading logo status
 
 LOGO_MAC = '8C:F3:19:B5:40:16'
 LOGO_IP = '192.168.0.5'
@@ -66,7 +67,7 @@ def init():
     global status_queue, rfid_A_queue, rfid_B_queue
     
     # Connection with logo
-    logo_client = LogoFactory.get_logo_conn('s7')
+    logo_client = LogoFactory.get_logo_conn('modbus')
     # Trying testing local server
     try:
         logo_client.connect('127.0.0.1')
@@ -87,7 +88,7 @@ def init():
     # RFID Reader
     options = {
         'db_root_folder': './db/'
-        ,'reader_type': 'tcp'
+        ,'reader_type': 'serial'
     }
     rfid.init(options)
 
@@ -102,6 +103,12 @@ def init():
     app.geometry(f"{window_width}x{window_height}+{int((screen_width - window_width) / 2)}+{int((screen_height - window_height) / 2)}")
 
     app_font = font.Font(size=14)
+
+def init_logo_status():
+    global signals_writing
+
+    for key in signals_writing:
+        write_memory(signals_writing[key], 0)
 
 def read_memory(addr):
     return int(logo_client.read(addr))
@@ -150,7 +157,7 @@ def read_logo_signals_status():
     while True:
         status = read_status()
         status_queue.put(status)  # Send status to the main thread
-        time.sleep(1)
+        time.sleep(UI_DELAY)
 
 def update_ui_from_queue():
     global control_labels, semaphore_ui
@@ -192,7 +199,7 @@ def update_ui_from_queue():
         pass  # No valid card readings
 
     # Schedule the next update
-    app.after(200, update_ui_from_queue)
+    app.after(500, update_ui_from_queue)
 
 def on_weight_change(event):
     global weight_scale
@@ -223,7 +230,7 @@ def setup_semaphore_ui(frame, row):
     semaphore_ui['canvas'] = canvas
     semaphores = {}
 
-    # Semaphore A (Exit)
+    # Semaphore A (Exit <--- Entry)
     y = 50
     semaphore_A_exit = {}
     semaphore_A_exit_red = create_semaphore(canvas, pad, y, rad, 'gray')
@@ -232,7 +239,7 @@ def setup_semaphore_ui(frame, row):
     semaphore_A_exit['normal'] = semaphore_A_exit_green
     semaphores['Q2_semaforo_A2'] = semaphore_A_exit
 
-    arrow_a = create_arrow(canvas, 2*pad, y + int(pad/2), sep, y + int(pad/2))
+    arrow_a = create_arrow(canvas, sep, y + int(pad/2), 2*pad, y + int(pad/2))
     
     semaphore_A_entry = {}
     semaphore_A_entry_red = create_semaphore(canvas, pad+sep, y, rad, 'gray')
@@ -241,7 +248,7 @@ def setup_semaphore_ui(frame, row):
     semaphore_A_entry['normal'] = semaphore_A_entry_green
     semaphores['Q1_semaforo_A1'] = semaphore_A_entry
 
-    # Semaphore B (Entry)
+    # Semaphore B (Entry ---> Exit)
     y += pad + rad
     y += pad
     semaphore_B_entry = {}
@@ -251,7 +258,7 @@ def setup_semaphore_ui(frame, row):
     semaphore_B_entry['normal'] = semaphore_B_entry_green
     semaphores['Q3_semaforo_B1'] = semaphore_B_entry
 
-    arrow_b = create_arrow(canvas, sep, y + int(pad/2), 2*pad, y + int(pad/2))
+    arrow_b = create_arrow(canvas, 2*pad, y + int(pad/2), sep, y + int(pad/2))
     
     semaphore_B_exit = {}
     semaphore_B_exit_red = create_semaphore(canvas, pad+sep, y, rad, 'gray')
@@ -309,6 +316,8 @@ def main():
 
     init()
     
+    init_logo_status()
+
     frame = create_scrollable_frame(app)
 
     # Centering widgets

@@ -1,11 +1,13 @@
 # Only for testing
+'''
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'testing'))
 import rfid.testing.serial as serial
+'''
 
-#import serial
-#from serial.tools import list_ports
+import serial
+from serial.tools import list_ports
 import socket
 
 # Define the base class for readers
@@ -61,8 +63,8 @@ class ReaderFactory:
 
     @staticmethod
     def autodetect_ports():
-        ports = [type('', (), {'name':'COM3', 'description': 'Port COM3', 'serial_number': 'A5069RR4A'})(), type('', (), {'name':'COM4', 'description': 'Port COM4', 'serial_number': 'A5069RR4A'})()]
-        #ports = list_ports.comports()
+        #ports = [type('', (), {'name':'COM3', 'description': 'Port COM3', 'serial_number': 'A5069RR4A'})(), type('', (), {'name':'COM4', 'description': 'Port COM4', 'serial_number': 'A5069RR4A'})()]
+        ports = list_ports.comports()
 
         for p in ports:
             print(f'{p.name} - {p.description} -- {p.serial_number}')

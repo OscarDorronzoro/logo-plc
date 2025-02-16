@@ -1,9 +1,10 @@
 import snap7
 #from snap7.util import *
 #from snap7.type import *
-from pymodbus.client import ModbusTcpClient
+#from pymodbus.client import ModbusTcpClient
 #from snap7.types import *
-#from pymodbus.client.sync import ModbusTcpClient
+from pymodbus.client.sync import ModbusTcpClient
+#import pdb
 
 # Define the base class for Logo! connections
 class LogoConn:
@@ -25,6 +26,7 @@ class LogoConn:
 
 # Define the SerialReader class
 class S7(LogoConn):
+    '''
     signals_writing = {
         'hab_general': 'V0.0', # Continous signal
         'balanza_en_cero': 'V0.1', # Continoues signal
@@ -48,6 +50,7 @@ class S7(LogoConn):
         ,'Q3_semaforo_B1': 'V.2.2'
         ,'Q4_semaforo_B2': 'V.2.3'
     }
+    '''
 
     def __init__(self):
         super().__init__()
@@ -73,6 +76,7 @@ class S7(LogoConn):
 
 # Define the TCPReader class
 class Modbus(LogoConn):
+    '''
     signals_writing = {
         'hab_general': '1', # Continous signal
         'balanza_en_cero': '2', # Continoues signal
@@ -96,44 +100,33 @@ class Modbus(LogoConn):
         ,'Q3_semaforo_B1': '30'
         ,'Q4_semaforo_B2': '31'
     }
-
-    s7_to_modbus_mapping = {
-        'V0.0': '1'
-        ,'V0.1': '2'
-        ,'V0.2': '3'
-        ,'V0.3': '4'
-        ,'V0.4': '5'
-        ,'V0.5': '6'
-        ,'V1.0': '20'
-        ,'V1.1': '21'
-        ,'V1.2': '22'
-        ,'V1.3': '23'
-        ,'V1.4': '24'
-        ,'V1.5': '25'
-        ,'V1.6': '26'
-        ,'V1.7': '27'
-        ,'V2.0': '28'
-        ,'V2.1': '29'
-        ,'V2.2': '30'
-        ,'V2.3': '31'
-    }
+    '''
     
     def __init__(self):
         super().__init__()
 
-    def connect(self, ip_address, port=502):
+    def connect(self, ip_address, port=510):
         self.client = ModbusTcpClient(ip_address, port=port)
         is_conn_OK = self.client.connect()
         if not is_conn_OK:
             raise Exception(f'Unable to connect via modbus to {ip_address}:{port}')
+    
+    def s7_to_modbus_coil(self, addr):
+        modbus_offset = 0
+        addr_splitted = addr.replace('V', '').split('.')
+        coil_number = int(addr_splitted[0])*8 + int(addr_splitted[1]) + modbus_offset
+        return coil_number
 
     def read(self, addr):
-        response = self.client.read_coils(int(Modbus.s7_to_modbus_mapping[addr]), 1)
-        # if not response.isError():
+        coil = self.s7_to_modbus_coil(addr)
+        response = self.client.read_coils(coil, 1)
+        if response.isError():
+            raise Exception(f'Error connecting to modbus to read. IsError: {response.isError()}')
         return response.bits[0]
 
     def write(self, addr, data):
-        self.client.write_coil(int(Modbus.s7_to_modbus_mapping[addr]), bool(data))
+        coil = self.s7_to_modbus_coil(addr)
+        self.client.write_coil(coil, bool(data))
 
 # Define the ReaderFactory class
 class LogoFactory:
