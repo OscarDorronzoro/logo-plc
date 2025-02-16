@@ -1,0 +1,4 @@
+pyserial==3.5
+python-snap7==1.2
+pymodbus==2.5.3
+#scapy==2.5.0

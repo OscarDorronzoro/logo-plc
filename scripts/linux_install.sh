@@ -20,7 +20,8 @@ fi
 sudo apt-get update
 sudo apt-get install python3-tk
 pip3 install -r requirements.txt
-sudo pip3 install python-snap7
+sudo pip3 install -r requirements.txt
+#sudo pip3 install python-snap7==1.2 --ignore-installed
 
 exit 0
 

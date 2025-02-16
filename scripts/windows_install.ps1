@@ -14,8 +14,7 @@ if ($arch -eq "64") {
     exit 1
 }
 
-pip install -r requirements.txt
-#pip install tkinter
+py -m pip install -r requirements.txt
 
 exit 0
 

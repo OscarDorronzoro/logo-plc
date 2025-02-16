@@ -1,4 +1,0 @@
-pyserial
-python-snap7
-pymodbus
-scapy
