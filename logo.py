@@ -40,6 +40,8 @@ signals_reading = {
 TRUCK_WEIGHT = 4000 # Threshold to calculate if there is a truck on the scale
 PULSE_WIDTH = 1 # Pulse duration in seconds
 UI_DELAY = 1 # Seconds to wait for reading logo status
+LOGO_CONN_TYPE = 'modbus'
+RFID_READER_TYPE = 'tcp'
 
 LOGO_MAC = '8C:F3:19:B5:40:16'
 LOGO_IP = '192.168.0.5'
@@ -58,16 +60,30 @@ rfid_A_queue = None
 rfid_B_queue = None
 
 
-def lookup_ip_address(mac_address):
-    pass
+'''
+# Test to autodetect Logo! IP
+def lookup_ip_address(cidr, mac_address):
+    arp_request = ARP(pdst=cidr) # Network (e.g: 192.168.0.0/24)
+    ether = Ether(dst='ff:ff:ff:ff:ff:ff') # Broadcast
+    packet = ether/arp_request
+
+    result = srp(packet, timeout=2, verbose=0)[0]
+
+    for sent, received in result:
+        if received.hwsrc.lower() == mac_address.lower():
+            return received.psrc
+
+    return None
+'''
 
 def init():
     global logo_client
     global app, app_font
     global status_queue, rfid_A_queue, rfid_B_queue
-    
+    global LOGO_CONN_TYPE, RFID_READER_TYPE
+
     # Connection with logo
-    logo_client = LogoFactory.get_logo_conn('modbus')
+    logo_client = LogoFactory.get_logo_conn(LOGO_CONN_TYPE)
     # Trying testing local server
     try:
         logo_client.connect('127.0.0.1')
@@ -88,7 +104,7 @@ def init():
     # RFID Reader
     options = {
         'db_root_folder': './db/'
-        ,'reader_type': 'serial'
+        ,'reader_type': RFID_READER_TYPE
     }
     rfid.init(options)
 
@@ -109,6 +125,8 @@ def init_logo_status():
 
     for key in signals_writing:
         write_memory(signals_writing[key], 0)
+
+    write_memory(signals_writing['balanza_en_cero'], 1)
 
 def read_memory(addr):
     return int(logo_client.read(addr))

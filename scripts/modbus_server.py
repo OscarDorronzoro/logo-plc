@@ -24,8 +24,9 @@ def run_simulated_server():
     server_context = ModbusServerContext(slaves=slave_context, single=True)
 
     # Start the Modbus TCP server
-    print("Starting Modbus TCP server on localhost:502")
-    StartTcpServer(context=server_context, address=("localhost", 502))
+    port = 510
+    print(f'Starting Modbus TCP server on localhost:{port}')
+    StartTcpServer(context=server_context, address=('localhost', port))
 
 if __name__ == "__main__":
     run_simulated_server()
