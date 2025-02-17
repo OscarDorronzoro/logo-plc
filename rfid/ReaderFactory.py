@@ -42,7 +42,7 @@ class TCPReader(Reader):
     def __init__(self, port):
         super().__init__()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind(('localhost', port))
+        self.socket.bind(('0.0.0.0', port))
         self.socket.listen(4) # Maximun 4 connections
     
     def read(self, size=14):
