@@ -1,5 +1,5 @@
 $arch = (Get-WmiObject Win32_OperatingSystem).OSArchitecture
-$arch = $arch -replace '[\s-]', '' -replace 'bit', '' -replace 'bits', ''
+$arch = $arch -replace '[\s-]', '' -replace 's', '' -replace 'bit', '' -replace 'bits', ''
 
 if ($arch -eq "64") {
     Write-Host "64-bit architecture detected."
