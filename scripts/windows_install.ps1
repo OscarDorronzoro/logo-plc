@@ -14,6 +14,7 @@ if ($arch -eq "64") {
     exit 1
 }
 
+py -m pip install setuptools
 py -m pip install -r requirements.txt
 
 exit 0

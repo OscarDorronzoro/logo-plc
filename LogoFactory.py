@@ -24,7 +24,7 @@ class LogoConn:
         if self.client:
             self.client.close()
 
-# Define the SerialReader class
+# Define the S7 Logo class
 class S7(LogoConn):
     '''
     signals_writing = {
@@ -74,7 +74,7 @@ class S7(LogoConn):
         if self.client:
             self.client.disconnect()
 
-# Define the TCPReader class
+# Define the Modbus Logo class
 class Modbus(LogoConn):
     '''
     signals_writing = {
@@ -128,7 +128,7 @@ class Modbus(LogoConn):
         coil = self.s7_to_modbus_coil(addr)
         self.client.write_coil(coil, bool(data))
 
-# Define the ReaderFactory class
+# Define the LogoFactory class
 class LogoFactory:
     @staticmethod
     def get_logo_conn(conn_type):
