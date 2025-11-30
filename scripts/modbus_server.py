@@ -1,32 +1,40 @@
 from pymodbus.server.sync import StartTcpServer
 from pymodbus.datastore import ModbusSequentialDataBlock, ModbusSlaveContext, ModbusServerContext
+import threading
 
-def run_simulated_server():
+def run_simulated_server(port):
     # Define the data blocks for the server
-    # Coils (read/write, 1 bit)
-    coils = ModbusSequentialDataBlock(0x00, [False] * 100)  # 100 coils starting at address 0
-    # Discrete Inputs (read-only, 1 bit)
-    discrete_inputs = ModbusSequentialDataBlock(0x00, [False] * 100)  # 100 discrete inputs starting at address 0
-    # Holding Registers (read/write, 16 bits)
-    holding_registers = ModbusSequentialDataBlock(0x00, [0] * 100)  # 100 holding registers starting at address 0
-    # Input Registers (read-only, 16 bits)
-    input_registers = ModbusSequentialDataBlock(0x00, [0] * 100)  # 100 input registers starting at address 0
+    coils = ModbusSequentialDataBlock(0x00, [False] * 100)
+    discrete_inputs = ModbusSequentialDataBlock(0x00, [False] * 100)
+    holding_registers = ModbusSequentialDataBlock(0x00, [0] * 100)
+    input_registers = ModbusSequentialDataBlock(0x00, [0] * 100)
 
-    # Create a Modbus slave context (represents a single device)
+    # Create a Modbus slave context
     slave_context = ModbusSlaveContext(
-        di=discrete_inputs,  # Discrete Inputs
-        co=coils,           # Coils
-        hr=holding_registers,  # Holding Registers
-        ir=input_registers,  # Input Registers
+        di=discrete_inputs,
+        co=coils,
+        hr=holding_registers,
+        ir=input_registers,
     )
 
-    # Create a Modbus server context (can contain multiple slaves)
+    # Create a Modbus server context
     server_context = ModbusServerContext(slaves=slave_context, single=True)
 
-    # Start the Modbus TCP server
-    port = 510
-    print(f'Starting Modbus TCP server on localhost:{port}')
+    print(f"Starting Modbus TCP server on localhost:{port}")
     StartTcpServer(context=server_context, address=('localhost', port))
 
 if __name__ == "__main__":
-    run_simulated_server()
+    ports = [510, 10510, 11510, 12510]
+    threads = []
+
+    for p in ports:
+        t = threading.Thread(target=run_simulated_server, args=(p,), daemon=True)
+        threads.append(t)
+        t.start()
+
+    print("All Modbus servers started.")
+    try:
+        while True:
+            pass  # Mantener el script vivo
+    except KeyboardInterrupt:
+        print("Stopping servers...")
